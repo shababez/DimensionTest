@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>B1 Dimension Measurement Form</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mut:#66707c;--ac:#1f6feb;--bd:#d9dee5;--hd:#e9edf2;--bad:#d1242f;--badbg:#fde8ea;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171b;--card:#1d2127;--tx:#e8ebef;--mut:#9aa4b0;--ac:#5b9cff;--bd:#323a44;--hd:#272d35;--bad:#ff7b84;--badbg:#4a2227;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14171b;--card:#1d2127;--tx:#e8ebef;--mut:#9aa4b0;--ac:#5b9cff;--bd:#323a44;--hd:#272d35;--bad:#ff7b84;--badbg:#4a2227;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;padding:14px}
+main{max-width:1000px;margin:0 auto}
+h1{font-size:1.2rem;margin:0}
+.s{color:var(--mut);font-size:.85rem;margin:2px 0 12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+label{font-size:.75rem;color:var(--mut);display:block}
+input,select{width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button,label.bt{display:inline-block;background:var(--ac);color:#fff;border:0;border-radius:10px;padding:11px 16px;font:inherit;font-weight:600;cursor:pointer}
+button.o{background:transparent;color:var(--ac);border:1px solid var(--ac)}
+button:disabled{opacity:.5}
+.w{overflow-x:auto}
+table{border-collapse:collapse;font-size:.85rem}
+th,td{border:1px solid var(--bd);padding:0;text-align:center;min-width:66px}
+th{background:var(--hd);padding:6px 4px}
+td:first-child,th:first-child{position:sticky;left:0;background:var(--hd);min-width:58px;padding:4px;z-index:1}
+td input{border:0;border-radius:0;text-align:center;padding:7px 2px;background:transparent}
+td.bad input{background:var(--badbg);color:var(--bad);font-weight:700}
+td.un input{background:#fff3cd;color:#5c4400;font-weight:700}
+tr.sp td input{font-weight:600}
+tr.st td{background:var(--hd);font-weight:600;padding:6px 2px}
+#pv img{max-height:130px;border-radius:8px;margin-top:8px;border:1px solid var(--bd)}
+#msg{color:var(--mut);font-size:.85rem;margin-top:8px}
+</style>
+</head>
+<body>
+<main>
+<h1>Group B1 Dimension Measurement Result</h1>
+<p class="s">Nexperia Malaysia · Reliability &amp; Failure Analysis · Units in mm</p>
+<div class="card"><strong>Snap &amp; read</strong>
+<p class="s">Take a clear, straight-on photo of the handwritten paper, then tap Read. The package columns, spec limits, header and all measurements are read from the paper, so any package layout works.</p>
+<div class="row"><label class="bt" for="ph">Choose photo</label><input id="ph" type="file" accept="image/*" hidden><button id="rd" disabled>Read the paper</button></div>
+<div id="pv"></div><div id="rm" class="s" style="margin:8px 0 0"></div></div>
+<div class="card"><div class="g" id="hd"></div>
+<div style="margin-top:8px;max-width:260px"><label>Layout preset (used only if you key in by hand)</label><select id="pre"></select></div></div>
+<div class="card"><div class="w"><table id="tb"></table></div>
+<p class="s" style="margin:8px 0 0">Red = outside Min/Max. Yellow = unsure digit. Tap any cell to fix it. Avg, Max and Min are automatic.</p></div>
+<div class="card"><label>Remarks</label><input id="rem">
+<div class="row" style="margin-top:10px"><button id="xl">Download Excel</button><button class="o" id="pf">Download PDF</button><button class="o" id="clr">Clear measurements</button></div>
+<div id="msg"></div></div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const N=30,SP=["Max","Nom","Min"];
+const PRE={
+"SOT402":{cols:["A","A1","A2","A3","bp","c","D","E","HE","L","Lp"],Min:["0.932","0.05","0.8","","0.19","0.09","4.9","4.3","6.2","","0.45"],Nom:["","","","0.25","","","","","","1",""],Max:["1.132","0.15","1.05","","0.3","0.2","5.1","4.5","6.6","","0.75"]},
+"SOT1061":{cols:["A","A1","b","D","D1","E","E1","e","e1","L"],Max:["0.65","0.04","0.35","2.10","1.6","2.10","1.1","","0.3","0.45"],Nom:["","","","2.00","","2.00","","1.3","",""],Min:["","","0.25","1.90","1.4","1.90","0.9","","0.2","0.35"]}
+};
+const HF=[["pkg","Package Type"],["lot","Lot No"],["rel","Rel Lot No"],["dev","Device"],["by","Performed by"],["date","Date"],["doc","Document No"],["iss","Issue"],["pg","Page"]];
+const $=id=>document.getElementById(id);
+const mk=p=>({h:{pkg:p,doc:"QRCHLS01",iss:"N"},cols:[...PRE[p].cols],spec:{Min:[...PRE[p].Min],Nom:[...PRE[p].Nom],Max:[...PRE[p].Max]},m:Array.from({length:N},()=>PRE[p].cols.map(()=>"")),rem:""});
+let S=mk("SOT402");
+try{const d=JSON.parse(localStorage.getItem("b1form2")||"null");if(d&&d.cols&&d.m)S=d}catch(e){}
+const save=()=>{try{localStorage.setItem("b1form2",JSON.stringify(S))}catch(e){}};
+const num=v=>{const x=parseFloat(v);return isNaN(x)?null:x};
+const oos=(x,j)=>{const mx=num(S.spec.Max[j]),mn=num(S.spec.Min[j]);return x!==null&&((mx!==null&&x>mx)||(mn!==null&&x<mn))};
+function cell(v,fn){const td=document.createElement("td"),i=document.createElement("input");i.inputMode="decimal";i.value=v;i.oninput=()=>fn(i.value);td.appendChild(i);return td}
+function build(){
+  $("hd").innerHTML="";
+  HF.forEach(f=>{const d=document.createElement("div");d.innerHTML="<label>"+f[1]+"</label><input>";const i=d.querySelector("input");i.value=S.h[f[0]]||"";i.oninput=()=>{S.h[f[0]]=i.value;save()};$("hd").appendChild(d)});
+  $("pre").innerHTML=Object.keys(PRE).map(k=>"<option"+(k===S.h.pkg?" selected":"")+">"+k+"</option>").join("");
+  $("rem").value=S.rem;
+  const t=$("tb");t.innerHTML="<tr><th>Units (mm)</th>"+S.cols.map(c=>"<th>"+c+"</th>").join("")+"</tr>";
+  SP.forEach(k=>{const tr=document.createElement("tr");tr.className="sp";tr.innerHTML="<td>"+k+"</td>";S.cols.forEach((c,j)=>tr.appendChild(cell(S.spec[k][j]||"",v=>{S.spec[k][j]=v;save();calc()})));t.appendChild(tr)});
+  for(let r=0;r<N;r++){const tr=document.createElement("tr");tr.innerHTML="<td>"+(r+1)+"</td>";S.cols.forEach((c,j)=>tr.appendChild(cell(S.m[r][j]||"",v=>{S.m[r][j]=v;save();calc()})));t.appendChild(tr)}
+  ["Avg","Max","Min"].forEach(k=>{const tr=document.createElement("tr");tr.className="st";tr.id="st"+k;tr.innerHTML="<td>"+k+"</td>"+S.cols.map(()=>"<td></td>").join("");t.appendChild(tr)});
+  calc();
+}
+function stats(){return S.cols.map((c,j)=>{const v=S.m.map(r=>num(r[j])).filter(x=>x!==null);return v.length?{Avg:v.reduce((a,b)=>a+b,0)/v.length,Max:Math.max(...v),Min:Math.min(...v)}:null})}
+function calc(){
+  const rows=$("tb").rows;
+  for(let r=0;r<N;r++)for(let j=0;j<S.cols.length;j++){rows[4+r].cells[j+1].className=String(S.m[r][j]).includes("?")?"un":oos(num(S.m[r][j]),j)?"bad":""}
+  const st=stats();["Avg","Max","Min"].forEach(k=>{const tr=$("st"+k);S.cols.forEach((c,j)=>{tr.cells[j+1].textContent=st[j]?st[j][k].toFixed(4):""})});
+}
+$("rem").oninput=e=>{S.rem=e.target.value;save()};
+$("pre").onchange=e=>{const p=e.target.value;if(S.m.flat().some(v=>v!=="")&&!confirm("Switch layout and clear the measurements?")){build();return}S=mk(p);save();build()};
+$("clr").onclick=()=>{if(!confirm("Clear all 30 rows of measurements?"))return;S.m=Array.from({length:N},()=>S.cols.map(()=>""));save();build()};
+let photo=null;
+$("ph").onchange=e=>{photo=e.target.files[0]||null;$("pv").innerHTML="";if(photo){const i=new Image();i.src=URL.createObjectURL(photo);$("pv").appendChild(i)}$("rd").disabled=!photo;$("rm").textContent=""};
+async function shrink(f){const b=await createImageBitmap(f),k=Math.min(1,3200/Math.max(b.width,b.height)),c=document.createElement("canvas");c.width=Math.round(b.width*k);c.height=Math.round(b.height*k);c.getContext("2d").drawImage(b,0,0,c.width,c.height);return new Promise(r=>c.toBlob(r,"image/jpeg",.95))}
+$("rd").onclick=async()=>{
+  $("rd").disabled=true;$("rm").textContent="Reading the handwriting… this can take about a minute.";
+  try{
+    const sample=await claude.use("sample");
+    if(!sample){$("rm").textContent="Reading isn’t available in this view. Open the page in claude.ai.";return}
+    const prompt="This is a photo of a filled-in 'Group B1 Dimension Measurement Result' paper for an electronic package. Return ONLY JSON: {\"pkg\":\"\",\"lot\":\"\",\"rellot\":\"\",\"device\":\"\",\"by\":\"\",\"date\":\"\",\"cols\":[],\"min\":[],\"nom\":[],\"max\":[],\"rows\":[]}. pkg=Package Type, lot=Lot No, rellot=Rel Lot No, device=Device, by=Performed by, date=Date. cols = the column names printed in the table header row, left to right, as plain ASCII (for example A, A1, A2, A3, bp, c, D, E, HE, L, Lp), without the Units column. min, nom, max = the PRINTED spec rows, one string per column in the same order, empty string if blank. rows = 30 arrays, one per numbered sample row 1 to 30 in order, each with one string per column in the same order as cols: these are the HANDWRITTEN measurements. Copy the handwritten numbers exactly. The decimal point is often written as a raised dot, so output a normal '.' (0·9760 becomes 0.9760). Values usually have 4 decimals. Ignore the printed Avg/Max/Min/#DIV/0! rows. A red dot or scribble over a digit means it was overwritten: read it carefully. If a digit is unclear, append ? to that value. Never invent values and use an empty string for a blank cell. Read each row left to right and keep every value in its own column. Do NOT change a handwritten value to fit the printed spec limits; out-of-spec values are real.";
+    const img=await shrink(photo);
+    const part=(a,b)=>sample.json(prompt+" ONLY fill rows "+a+" to "+b+" in rows (keep each row at its sample-number position) and use an empty array [] for every other row.",{images:[img],modelTier:"complex"});
+    const [d1,d2]=await Promise.all([part(1,15),part(16,30)]);
+    const cols=(Array.isArray(d1.cols)&&d1.cols.length>2)?d1.cols.map(String):S.cols,n=cols.length;
+    const pad=a=>Array.from({length:n},(_,j)=>String((a||[])[j]??""));
+    S.cols=cols;S.spec={Min:pad(d1.min),Nom:pad(d1.nom),Max:pad(d1.max)};
+    S.m=Array.from({length:N},(_,i)=>pad(((i<15?d1:d2).rows||[])[i]));
+    [["pkg","pkg"],["lot","lot"],["rellot","rel"],["device","dev"],["by","by"],["date","date"]].forEach(k=>{if(d1[k[0]])S.h[k[1]]=String(d1[k[0]])});
+    save();build();
+    const filled=S.m.flat().filter(v=>v!=="").length,un=S.m.flat().filter(v=>v.includes("?")).length,bad=document.querySelectorAll("td.bad").length;
+    $("rm").textContent=cols.length+" columns and "+filled+" values read. "+(un?un+" yellow cells and ":"")+bad+" red (out of spec) cells must be checked against the paper, since a misread digit often shows up red.";
+  }catch(e){
+    $("rm").textContent=(e&&e.code==="not_granted")?"Permission was declined, so the photo can’t be read.":"Couldn’t read the photo: "+((e&&e.message)||"try again");
+  }finally{$("rd").disabled=!photo}
+};
+const fname=()=>("B1_Dimension_"+(S.h.lot||"report")).replace(/[^\w\-]+/g,"_");
+async function out(fn,data,mime){const d=await claude.use("downloads");if(!d){$("msg").textContent="Downloads aren’t available in this view.";return}
+  try{await d.save({filename:fn,data:new Blob([data],{type:mime})})}catch(e){if(!e||e.code!=="declined")$("msg").textContent="Couldn’t save: "+((e&&e.message)||"try again")}}
+$("xl").onclick=()=>{
+  try{
+    const h=S.h,A=[["Nexperia Malaysia"],["Title: Group B1 Dimension Measurement Result"],["Reliability & Failure Analysis"],
+      ["Package Type",h.pkg||"","","Device",h.dev||""],["Lot No",h.lot||"","","Performed by",h.by||""],["Rel Lot No",h.rel||"","","Date",h.date||""],
+      ["Document No",h.doc||"","","Issue",h.iss||"","","Page",h.pg||""],[]];
+    A.push(["Units (mm)",...S.cols]);
+    SP.forEach(k=>A.push([k,...S.spec[k].map(v=>num(v)??"")]));
+    const f=A.length+1;
+    S.m.forEach((r,i)=>A.push([i+1,...r.map(v=>num(v)??"")]));
+    const l=A.length;
+    [["Avg","AVERAGE"],["Max","MAX"],["Min","MIN"]].forEach(k=>A.push([k[0],...S.cols.map((c,j)=>{const L=XLSX.utils.encode_col(j+1);return{t:"n",f:'IFERROR('+k[1]+'('+L+f+':'+L+l+'),"")'}})]));
+    A.push([],["Remarks:",S.rem]);
+    const ws=XLSX.utils.aoa_to_sheet(A);ws["!cols"]=[{wch:14},...S.cols.map(()=>({wch:10}))];
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"B1 Dimension");
+    out(fname()+".xlsx",XLSX.write(wb,{bookType:"xlsx",type:"array"}),"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  }catch(e){$("msg").textContent="Excel error: "+e.message}
+};
+$("pf").onclick=()=>{
+  try{
+    const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"});
+    doc.setFontSize(11);doc.text("Nexperia Malaysia - Group B1 Dimension Measurement Result",10,12);
+    doc.setFontSize(8);doc.text(HF.map(f=>f[1]+": "+(S.h[f[0]]||"-")).join("   "),10,18,{maxWidth:190});
+    const st=stats();
+    const body=[...SP.map(k=>[k,...S.spec[k]]),...S.m.map((r,i)=>[i+1,...r]),...["Avg","Max","Min"].map(k=>[k,...st.map(s=>s?s[k].toFixed(4):"")])];
+    doc.autoTable({head:[["Units (mm)",...S.cols]],body,startY:28,theme:"grid",styles:{fontSize:6.5,cellPadding:.8,halign:"center"},headStyles:{fillColor:[90,100,115]},
+      didParseCell:c=>{if(c.section==="body"&&c.row.index>=3&&c.row.index<3+N&&c.column.index>0&&oos(num(c.cell.raw),c.column.index-1)){c.cell.styles.textColor=[209,36,47];c.cell.styles.fontStyle="bold"}}});
+    doc.setFontSize(8);doc.text("Remarks: "+(S.rem||"-"),10,doc.lastAutoTable.finalY+6,{maxWidth:190});
+    out(fname()+".pdf",doc.output("arraybuffer"),"application/pdf");
+  }catch(e){$("msg").textContent="PDF error: "+e.message}
+};
+build();
+</script>
+</body>
+</html>
